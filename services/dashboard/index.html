@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blazing Buffalo - Mistake Learning Dashboard</title>
+    <style>
+        /* Critical CSS - Inlined for 0 CLS */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@500;700&display=swap&text=BlazingBufoMstkePlaybokTrndc0123456789%');
+
+        :root {
+            /* oklch() color system - Neo-Brutalist palette */
+            --neutral-950: oklch(0.15 0.01 240);
+            --neutral-900: oklch(0.22 0.015 240);
+            --neutral-800: oklch(0.30 0.02 240);
+            --neutral-700: oklch(0.45 0.025 240);
+            --neutral-400: oklch(0.65 0.02 240);
+
+            --orange-500: oklch(0.68 0.18 45);
+            --orange-600: oklch(0.58 0.20 45);
+
+            --red-500: oklch(0.60 0.24 25);
+            --red-600: oklch(0.50 0.26 25);
+
+            --yellow-500: oklch(0.78 0.16 85);
+            --yellow-600: oklch(0.68 0.18 85);
+
+            --green-500: oklch(0.72 0.20 145);
+            --green-600: oklch(0.62 0.22 145);
+
+            --blue-500: oklch(0.60 0.22 240);
+
+            /* Custom radius scale (not default Tailwind) */
+            --radius-tight: 2px;
+            --radius-standard: 6px;
+            --radius-loose: 12px;
+
+            /* Custom shadow scale (not default Tailwind) */
+            --shadow-shallow: 0 2px 8px oklch(0.15 0.01 240 / 0.3);
+            --shadow-medium: 0 4px 16px oklch(0.15 0.01 240 / 0.4);
+            --shadow-deep: 0 8px 32px oklch(0.15 0.01 240 / 0.5);
+
+            /* Physics timing */
+            --spring-snappy: cubic-bezier(0.34, 1.56, 0.64, 1);
+            --spring-gentle: cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            font-size: 15px;
+            line-height: 1.6;
+            background: var(--neutral-950);
+            color: oklch(0.95 0.01 240);
+            min-height: 100vh;
+        }
+
+        /* Skip link for accessibility */
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            background: var(--orange-500);
+            color: var(--neutral-950);
+            padding: 8px 16px;
+            text-decoration: none;
+            border-radius: var(--radius-standard);
+            font-weight: 600;
+        }
+        .skip-link:focus {
+            top: 8px;
+            left: 8px;
+            outline: 3px solid var(--orange-500);
+            outline-offset: 2px;
+        }
+
+        /* Custom focus styles (animated) */
+        *:focus-visible {
+            outline: 3px solid var(--orange-500);
+            outline-offset: 2px;
+            border-radius: var(--radius-tight);
+            animation: focusPulse 0.4s var(--spring-gentle);
+        }
+
+        @keyframes focusPulse {
+            0%, 100% { outline-color: var(--orange-500); }
+            50% { outline-color: var(--orange-600); }
+        }
+
+        /* Typography scale */
+        h1 {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: clamp(1.5rem, 4vw, 2rem);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--orange-500);
+        }
+        h2 {
+            font-size: 1.25rem;
+            font-weight: 800;
+            letter-spacing: -0.01em;
+        }
+        h3 {
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--neutral-400);
+        }
+
+        /* Utility classes */
+        .mono { font-family: 'JetBrains Mono', monospace; }
+
+        /* Layout primitives */
+        .container { max-width: 1600px; margin: 0 auto; }
+        .grid-main {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: clamp(1rem, 2vw, 1.5rem);
+            padding: clamp(1rem, 3vw, 2rem);
+        }
+
+        /* Header */
+        header {
+            background: var(--neutral-900);
+            border-bottom: 3px solid var(--neutral-800);
+            padding: 1rem clamp(1rem, 3vw, 2rem);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow-shallow);
+        }
+        .header-inner {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        .header-status {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--neutral-400);
+        }
+
+        /* Metric zones (asymmetric) */
+        .zone-critical {
+            grid-column: span 12;
+            background: linear-gradient(135deg, var(--neutral-900) 0%, var(--neutral-800) 100%);
+            border: 2px solid var(--neutral-700);
+            border-radius: var(--radius-loose);
+            padding: clamp(1.5rem, 3vw, 2rem);
+            box-shadow: var(--shadow-medium);
+        }
+
+        .metrics-primary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .metric-card {
+            background: var(--neutral-800);
+            border: 2px solid var(--neutral-700);
+            border-radius: var(--radius-standard);
+            padding: 1.5rem;
+            transition: all 0.3s var(--spring-gentle);
+        }
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-medium);
+            border-color: var(--orange-500);
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--neutral-400);
+            margin-bottom: 0.5rem;
+        }
+        .metric-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        /* Color variants */
+        .text-orange { color: var(--orange-500); }
+        .text-green { color: var(--green-500); }
+        .text-red { color: var(--red-500); }
+        .text-yellow { color: var(--yellow-500); }
+
+        /* Content zones */
+        .zone-mistakes {
+            grid-column: span 12;
+        }
+        .zone-playbooks {
+            grid-column: span 12;
+        }
+        .zone-trends {
+            grid-column: span 12;
+        }
+
+        @media (min-width: 1024px) {
+            .zone-mistakes { grid-column: span 7; }
+            .zone-playbooks { grid-column: span 5; }
+        }
+
+        /* Card base */
+        .card {
+            background: var(--neutral-900);
+            border: 2px solid var(--neutral-800);
+            border-radius: var(--radius-standard);
+            overflow: hidden;
+            box-shadow: var(--shadow-shallow);
+        }
+        .card-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 2px solid var(--neutral-800);
+        }
+        .card-body {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        /* Custom scrollbar */
+        .card-body::-webkit-scrollbar { width: 8px; }
+        .card-body::-webkit-scrollbar-track { background: var(--neutral-900); }
+        .card-body::-webkit-scrollbar-thumb {
+            background: var(--neutral-700);
+            border-radius: var(--radius-tight);
+        }
+        .card-body::-webkit-scrollbar-thumb:hover { background: var(--neutral-400); }
+
+        /* Mistake item */
+        .mistake-item {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--neutral-800);
+            transition: background 0.2s var(--spring-gentle);
+        }
+        .mistake-item:hover {
+            background: var(--neutral-800);
+        }
+        .mistake-item:last-child { border-bottom: none; }
+
+        .mistake-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
+            gap: 1rem;
+        }
+        .mistake-badges {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 0.25rem 0.75rem;
+            border-radius: var(--radius-tight);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .badge-critical { background: var(--red-600); color: white; }
+        .badge-high { background: var(--orange-600); color: white; }
+        .badge-medium { background: var(--yellow-600); color: var(--neutral-950); }
+        .badge-low { background: var(--blue-500); color: white; }
+
+        .mistake-time {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--neutral-400);
+            white-space: nowrap;
+        }
+        .mistake-desc {
+            font-size: 0.875rem;
+            color: oklch(0.85 0.01 240);
+            line-height: 1.5;
+        }
+
+        /* Playbook item */
+        .playbook-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--neutral-800);
+            transition: background 0.2s var(--spring-gentle);
+        }
+        .playbook-item:hover {
+            background: var(--neutral-800);
+        }
+        .playbook-item:last-child { border-bottom: none; }
+
+        .playbook-name {
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+        .playbook-metrics {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        .playbook-success {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        /* Circuit breaker indicator */
+        .circuit-indicator {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 2px solid var(--neutral-700);
+            transition: all 0.3s var(--spring-snappy);
+        }
+        .circuit-indicator:hover {
+            transform: scale(1.2);
+        }
+        .circuit-closed { background: var(--green-500); box-shadow: 0 0 12px var(--green-500); }
+        .circuit-open { background: var(--red-500); box-shadow: 0 0 12px var(--red-500); }
+        .circuit-half-open { background: var(--yellow-500); box-shadow: 0 0 12px var(--yellow-500); }
+
+        /* Empty state */
+        .empty-state {
+            padding: 3rem 1.5rem;
+            text-align: center;
+            color: var(--neutral-400);
+        }
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        /* Loading skeleton */
+        @keyframes shimmer {
+            0% { background-position: -1000px 0; }
+            100% { background-position: 1000px 0; }
+        }
+        .skeleton {
+            background: linear-gradient(90deg, var(--neutral-800) 25%, var(--neutral-700) 50%, var(--neutral-800) 75%);
+            background-size: 1000px 100%;
+            animation: shimmer 2s infinite;
+            border-radius: var(--radius-tight);
+        }
+        .skeleton-text { height: 1rem; margin-bottom: 0.5rem; }
+        .skeleton-heading { height: 1.5rem; width: 60%; margin-bottom: 1rem; }
+
+        /* Reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* 56px minimum tap targets for mobile */
+        @media (max-width: 768px) {
+            .mistake-item, .playbook-item {
+                min-height: 56px;
+            }
+        }
+    </style>
+
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <script src="https://unpkg.com/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
+</head>
+<body>
+    <!-- Skip link for screen readers -->
+    <a href="#main" class="skip-link">Skip to main content</a>
+
+    <div x-data="dashboard()" x-init="init()" x-cloak>
+        <!-- Header -->
+        <header role="banner">
+            <div class="header-inner">
+                <h1>🦬 Blazing Buffalo</h1>
+                <div class="header-status" role="status" aria-live="polite" aria-atomic="true">
+                    <span x-text="`Last sync: ${lastUpdated}`"></span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main content -->
+        <main id="main" role="main" class="container">
+            <div class="grid-main">
+                <!-- Critical metrics zone -->
+                <section class="zone-critical" aria-labelledby="metrics-heading">
+                    <h2 id="metrics-heading" class="sr-only">System Metrics</h2>
+                    <div class="metrics-primary"
+                         hx-get="/api/v1/stats"
+                         hx-trigger="load, every 30s"
+                         hx-swap="innerHTML"
+                         role="region"
+                         aria-live="polite">
+
+                        <!-- Metric cards will be populated by HTMX -->
+                        <div class="metric-card">
+                            <div class="metric-label">Total Mistakes</div>
+                            <div class="metric-value text-orange" x-text="stats.total_mistakes">0</div>
+                        </div>
+
+                        <div class="metric-card">
+                            <div class="metric-label">Active Playbooks</div>
+                            <div class="metric-value" x-text="stats.active_playbooks">0</div>
+                        </div>
+
+                        <div class="metric-card">
+                            <div class="metric-label">Success Rate</div>
+                            <div class="metric-value"
+                                 :class="stats.success_rate >= 0.7 ? 'text-green' : 'text-yellow'"
+                                 x-text="`${(stats.success_rate * 100).toFixed(1)}%`">0%</div>
+                        </div>
+
+                        <div class="metric-card">
+                            <div class="metric-label">Circuit Breakers</div>
+                            <div class="metric-value"
+                                 :class="stats.circuits_open > 0 ? 'text-red' : 'text-green'"
+                                 x-text="stats.circuits_open">0</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Recent mistakes -->
+                <section class="zone-mistakes" aria-labelledby="mistakes-heading">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 id="mistakes-heading">Recent Mistakes</h2>
+                        </div>
+                        <div class="card-body"
+                             hx-get="/api/v1/mistakes?limit=20"
+                             hx-trigger="load, every 30s"
+                             hx-swap="innerHTML"
+                             role="feed"
+                             aria-busy="false">
+
+                            <template x-if="mistakes.length === 0">
+                                <div class="empty-state">
+                                    <div class="empty-state-icon">🎉</div>
+                                    <p>No mistakes detected yet. System is learning.</p>
+                                </div>
+                            </template>
+
+                            <template x-for="mistake in mistakes" :key="mistake.id">
+                                <article class="mistake-item" role="article">
+                                    <div class="mistake-header">
+                                        <div class="mistake-badges">
+                                            <span class="badge"
+                                                  :class="`badge-${mistake.severity}`"
+                                                  x-text="mistake.severity"></span>
+                                            <span class="badge"
+                                                  style="background: var(--neutral-700); color: white;"
+                                                  x-text="mistake.category"></span>
+                                        </div>
+                                        <time class="mistake-time"
+                                              :datetime="mistake.created_at"
+                                              x-text="formatTime(mistake.created_at)"></time>
+                                    </div>
+                                    <p class="mistake-desc" x-text="mistake.description"></p>
+                                </article>
+                            </template>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Playbook status -->
+                <section class="zone-playbooks" aria-labelledby="playbooks-heading">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 id="playbooks-heading">Playbook Status</h2>
+                        </div>
+                        <div class="card-body"
+                             hx-get="/api/v1/playbooks?limit=20"
+                             hx-trigger="load, every 30s"
+                             hx-swap="innerHTML"
+                             role="list">
+
+                            <template x-if="playbooks.length === 0">
+                                <div class="empty-state">
+                                    <div class="empty-state-icon">📚</div>
+                                    <p>No playbooks configured yet.</p>
+                                </div>
+                            </template>
+
+                            <template x-for="playbook in playbooks" :key="playbook.id">
+                                <div class="playbook-item" role="listitem">
+                                    <div class="playbook-name" x-text="playbook.name"></div>
+                                    <div class="playbook-metrics">
+                                        <div class="playbook-success"
+                                             :class="playbook.success_rate >= 0.7 ? 'text-green' : 'text-yellow'"
+                                             x-text="`${(playbook.success_rate * 100).toFixed(0)}%`"></div>
+                                        <div class="circuit-indicator"
+                                             :class="{
+                                                 'circuit-closed': playbook.circuit_state === 0,
+                                                 'circuit-open': playbook.circuit_state === 1,
+                                                 'circuit-half-open': playbook.circuit_state === 2
+                                             }"
+                                             role="img"
+                                             :aria-label="`Circuit breaker ${['closed', 'open', 'half-open'][playbook.circuit_state]}`"></div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Trend chart -->
+                <section class="zone-trends" aria-labelledby="trends-heading">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 id="trends-heading">Mistakes Over Time</h2>
+                        </div>
+                        <div class="card-body" style="padding: 1.5rem;">
+                            <canvas id="trendChart"
+                                    role="img"
+                                    aria-label="Line chart showing mistake trends over time"
+                                    width="800"
+                                    height="300"></canvas>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function dashboard() {
+            return {
+                stats: {
+                    total_mistakes: 0,
+                    active_playbooks: 0,
+                    success_rate: 0,
+                    circuits_open: 0
+                },
+                mistakes: [],
+                playbooks: [],
+                lastUpdated: 'Never',
+                chartInstance: null,
+
+                async init() {
+                    await this.refresh();
+                    this.initChart();
+
+                    // Auto-refresh every 30 seconds
+                    setInterval(() => this.refresh(), 30000);
+                },
+
+                async refresh() {
+                    try {
+                        const [statsRes, mistakesRes, playbooksRes] = await Promise.all([
+                            fetch('/api/v1/stats').then(r => r.ok ? r.json() : this.stats),
+                            fetch('/api/v1/mistakes?limit=20').then(r => r.ok ? r.json() : []),
+                            fetch('/api/v1/playbooks?limit=20').then(r => r.ok ? r.json() : [])
+                        ]);
+
+                        this.stats = statsRes;
+                        this.mistakes = mistakesRes;
+                        this.playbooks = playbooksRes;
+                        this.lastUpdated = new Date().toLocaleTimeString();
+
+                        this.updateChart();
+                    } catch (error) {
+                        console.error('Failed to refresh dashboard:', error);
+                    }
+                },
+
+                formatTime(timestamp) {
+                    const date = new Date(timestamp);
+                    const now = new Date();
+                    const diff = Math.floor((now - date) / 1000);
+
+                    if (diff < 60) return `${diff}s ago`;
+                    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+                    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+                    return date.toLocaleDateString();
+                },
+
+                async initChart() {
+                    // Lazy-load Chart.js only when needed
+                    if (!window.Chart) {
+                        const script = document.createElement('script');
+                        script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+                        script.onload = () => this.createChart();
+                        document.head.appendChild(script);
+                    } else {
+                        this.createChart();
+                    }
+                },
+
+                createChart() {
+                    const ctx = document.getElementById('trendChart');
+                    if (!ctx || !window.Chart) return;
+
+                    this.chartInstance = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: [],
+                            datasets: [{
+                                label: 'Mistakes',
+                                data: [],
+                                borderColor: 'oklch(0.68 0.18 45)',
+                                backgroundColor: 'oklch(0.68 0.18 45 / 0.1)',
+                                borderWidth: 3,
+                                fill: true,
+                                tension: 0.4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: { color: 'oklch(0.65 0.02 240)' },
+                                    grid: { color: 'oklch(0.30 0.02 240)' }
+                                },
+                                x: {
+                                    ticks: { color: 'oklch(0.65 0.02 240)' },
+                                    grid: { color: 'oklch(0.30 0.02 240)' }
+                                }
+                            }
+                        }
+                    });
+                },
+
+                async updateChart() {
+                    if (!this.chartInstance) return;
+
+                    try {
+                        const trendsRes = await fetch('/api/v1/trends?hours=24');
+                        if (!trendsRes.ok) return;
+
+                        const trends = await trendsRes.json();
+                        this.chartInstance.data.labels = trends.map(t => new Date(t.timestamp).toLocaleTimeString());
+                        this.chartInstance.data.datasets[0].data = trends.map(t => t.count);
+                        this.chartInstance.update();
+                    } catch (error) {
+                        console.error('Failed to update chart:', error);
+                    }
+                }
+            }
+        }
+
+        // Screen reader utility
+        const srOnly = document.createElement('style');
+        srOnly.textContent = '.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border-width: 0; }';
+        document.head.appendChild(srOnly);
+
+        // x-cloak utility
+        const cloak = document.createElement('style');
+        cloak.textContent = '[x-cloak] { display: none !important; }';
+        document.head.appendChild(cloak);
+    </script>
+</body>
+</html>

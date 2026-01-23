@@ -1,0 +1,363 @@
+# Blazing Buffalo - Master Ralph-Wiggum Orchestration
+# 100/100 Production Grade Multi-Phase Development
+
+project:
+  name: blazing_buffalo
+  version: "1.0.0"
+  quality_target: "100/100"
+
+orchestration:
+  mode: "chief_of_staff_super"
+  parallel_execution: true
+  max_concurrent_agents: 6
+
+ralph_wiggum:
+  enabled: true
+  review_frequency: "per_task"
+  convergence_threshold: 0.85
+  max_iterations_per_task: 4
+
+  models:
+    claude:
+      endpoint: "local"
+      strengths: ["implementation", "coding", "debugging", "testing"]
+      cost_tier: "standard"
+    gemini:
+      endpoint: "http://localhost:5050"
+      strengths: ["security", "review", "edge_cases", "validation"]
+      cost_tier: "low"
+    glm:
+      endpoint: "http://localhost:5051"
+      strengths: ["architecture", "synthesis", "integration", "documentation"]
+      cost_tier: "low"
+
+  delegation_matrix:
+    # Task type -> Primary model -> Review model
+    security_task:
+      primary: "gemini"
+      reviewer: "claude"
+      final_check: "glm"
+    implementation_task:
+      primary: "claude"
+      reviewer: "gemini"
+      final_check: "glm"
+    architecture_task:
+      primary: "glm"
+      reviewer: "claude"
+      final_check: "gemini"
+    testing_task:
+      primary: "claude"
+      reviewer: "gemini"
+      final_check: "glm"
+    documentation_task:
+      primary: "glm"
+      reviewer: "claude"
+      final_check: "gemini"
+    integration_task:
+      primary: "claude"
+      reviewer: "glm"
+      final_check: "gemini"
+
+tmux_sessions:
+  master: "blazing-buffalo-orchestrator"
+  phases:
+    phase_1:
+      name: "bb-phase1-detection"
+      windows: ["neo4j-schema", "qdrant-collection", "mistake-detector", "correction-verifier"]
+    phase_2:
+      name: "bb-phase2-analysis"
+      windows: ["dynamic-taxonomy", "attribution", "rca-pipeline"]
+    phase_3:
+      name: "bb-phase3-prevention"
+      windows: ["playbook-gen", "conflict-detector", "circuit-breaker", "lifecycle", "executor", "resolver"]
+    phase_4:
+      name: "bb-phase4-integration"
+      windows: ["api-endpoints", "prometheus", "effectiveness", "rate-limiter", "audit-logger"]
+    phase_5:
+      name: "bb-phase5-hardening"
+      windows: ["disaster-recovery", "dashboard", "alerting", "documentation", "load-testing"]
+
+phases:
+  phase_1:
+    name: "Core Detection"
+    duration: "2 weeks"
+    parallel_groups:
+      group_1:  # Can run in parallel
+        - BB-005  # Neo4j schema
+        - BB-006  # Qdrant collection
+      group_2:  # Depends on group_1
+        - BB-007  # Mistake detector (depends on BB-005, BB-006)
+      group_3:  # Depends on group_2
+        - BB-008  # Correction verifier (depends on BB-007)
+    quality_gate:
+      min_confidence: 0.90
+      required_tests: true
+      security_review: true
+
+  phase_2:
+    name: "Analysis Pipeline"
+    duration: "2 weeks"
+    parallel_groups:
+      group_1:  # Can run in parallel after Phase 1
+        - BB-009  # Dynamic taxonomy
+        - BB-010  # Attribution scoring
+      group_2:  # Depends on group_1
+        - BB-011  # RCA pipeline (depends on BB-009, BB-010)
+    quality_gate:
+      min_confidence: 0.90
+      ralph_review: true
+      integration_tests: true
+
+  phase_3:
+    name: "Prevention System"
+    duration: "2 weeks"
+    parallel_groups:
+      group_1:  # Depends on Phase 2
+        - BB-012  # Playbook generator
+      group_2:  # Can run in parallel after BB-012
+        - BB-013  # Conflict detector
+        - BB-014  # Circuit breaker
+        - BB-015  # Lifecycle manager
+      group_3:  # Depends on BB-012, BB-014
+        - BB-016  # Playbook executor
+        - BB-017  # Playbook resolver
+    quality_gate:
+      min_confidence: 0.90
+      oscillation_test: true
+      timeout_test: true
+
+  phase_4:
+    name: "Integration"
+    duration: "2 weeks"
+    parallel_groups:
+      group_1:  # Can run in parallel
+        - BB-018  # REST API
+        - BB-021  # Rate limiter
+      group_2:  # Depends on BB-018
+        - BB-019  # Prometheus metrics
+        - BB-022  # Audit logger
+      group_3:  # Depends on BB-016
+        - BB-020  # Effectiveness tracker
+    quality_gate:
+      min_confidence: 0.90
+      api_tests: true
+      load_baseline: true
+
+  phase_5:
+    name: "Hardening"
+    duration: "2 weeks"
+    parallel_groups:
+      group_1:  # Can run in parallel
+        - BB-023  # Disaster recovery
+        - BB-025  # Alerting rules
+      group_2:  # Depends on BB-018, BB-019
+        - BB-024  # Dashboard UI
+        - BB-026  # Documentation
+      group_3:  # Final validation
+        - BB-027  # Load testing
+    quality_gate:
+      min_confidence: 0.95
+      full_integration_test: true
+      security_audit: true
+      documentation_complete: true
+
+task_definitions:
+  # Phase 1: Core Detection
+  BB-005:
+    title: "Neo4j Mistake Schema"
+    agent: "database-administrator"
+    model: "sonnet"
+    type: "implementation_task"
+    files: ["/home/pook/engineer-team/migrations/001_mistake_schema.cypher"]
+
+  BB-006:
+    title: "Qdrant Mistakes Collection"
+    agent: "database-administrator"
+    model: "haiku"
+    type: "implementation_task"
+    files: ["/home/pook/engineer-team/config/qdrant-mistakes-collection.json"]
+
+  BB-007:
+    title: "Mistake Detector Hook"
+    agent: "python-pro"
+    model: "sonnet"
+    type: "implementation_task"
+    depends_on: ["BB-005", "BB-006"]
+    files: ["/home/pook/.claude/hooks/mistake_detector.py"]
+
+  BB-008:
+    title: "Correction Verifier"
+    agent: "ai-engineer"
+    model: "sonnet"
+    type: "implementation_task"
+    depends_on: ["BB-007"]
+    files: ["/home/pook/engineer-team/lib/correction_verifier.py"]
+
+  # Phase 2: Analysis Pipeline
+  BB-009:
+    title: "Dynamic Taxonomy"
+    agent: "ai-engineer"
+    model: "sonnet"
+    type: "architecture_task"
+    depends_on: ["BB-007"]
+    files: ["/home/pook/engineer-team/lib/dynamic_taxonomy.py"]
+
+  BB-010:
+    title: "Attribution Scoring"
+    agent: "multi-agent-coordinator"
+    model: "sonnet"
+    type: "architecture_task"
+    depends_on: ["BB-007"]
+    files: ["/home/pook/engineer-team/lib/attribution.py"]
+
+  BB-011:
+    title: "RCA Pipeline with Ralph"
+    agent: "ai-engineer"
+    model: "opus"
+    type: "architecture_task"
+    depends_on: ["BB-009", "BB-010"]
+    files: ["/home/pook/engineer-team/lib/mistake_rca.py", "/home/pook/.claude/commands/rca-ralph.yaml"]
+
+  # Phase 3: Prevention System
+  BB-012:
+    title: "Playbook Generator"
+    agent: "prompt-engineer"
+    model: "sonnet"
+    type: "implementation_task"
+    depends_on: ["BB-011"]
+    files: ["/home/pook/engineer-team/lib/playbook_generator.py"]
+
+  BB-013:
+    title: "Conflict Detector"
+    agent: "qa-expert"
+    model: "sonnet"
+    type: "security_task"
+    depends_on: ["BB-012"]
+    files: ["/home/pook/engineer-team/lib/conflict_detector.py"]
+
+  BB-014:
+    title: "Circuit Breaker"
+    agent: "backend-developer"
+    model: "sonnet"
+    type: "implementation_task"
+    depends_on: ["BB-012"]
+    files: ["/home/pook/engineer-team/lib/circuit_breaker.py"]
+
+  BB-015:
+    title: "Playbook Lifecycle"
+    agent: "backend-developer"
+    model: "sonnet"
+    type: "implementation_task"
+    depends_on: ["BB-012"]
+    files: ["/home/pook/engineer-team/lib/playbook_lifecycle.py"]
+
+  BB-016:
+    title: "Playbook Executor"
+    agent: "workflow-orchestrator"
+    model: "sonnet"
+    type: "implementation_task"
+    depends_on: ["BB-012", "BB-014"]
+    files: ["/home/pook/engineer-team/lib/playbook_executor.py"]
+
+  BB-017:
+    title: "Playbook Resolver"
+    agent: "backend-developer"
+    model: "haiku"
+    type: "implementation_task"
+    depends_on: ["BB-012"]
+    files: ["/home/pook/engineer-team/lib/playbook_resolver.py"]
+
+  # Phase 4: Integration
+  BB-018:
+    title: "REST API Endpoints"
+    agent: "api-designer"
+    model: "sonnet"
+    type: "implementation_task"
+    depends_on: ["BB-007", "BB-016"]
+    files: ["/home/pook/engineer-team/services/api/mistake_routes.py"]
+
+  BB-019:
+    title: "Prometheus Metrics"
+    agent: "sre-engineer"
+    model: "sonnet"
+    type: "integration_task"
+    depends_on: ["BB-018"]
+    files: ["/home/pook/engineer-team/lib/metrics.py"]
+
+  BB-020:
+    title: "Effectiveness Tracker"
+    agent: "performance-monitor"
+    model: "sonnet"
+    type: "implementation_task"
+    depends_on: ["BB-016"]
+    files: ["/home/pook/engineer-team/lib/effectiveness_tracker.py"]
+
+  BB-021:
+    title: "Rate Limiter"
+    agent: "backend-developer"
+    model: "haiku"
+    type: "implementation_task"
+    depends_on: ["BB-011"]
+    files: ["/home/pook/engineer-team/lib/rate_limiter.py"]
+
+  BB-022:
+    title: "Audit Logger"
+    agent: "security-engineer"
+    model: "sonnet"
+    type: "security_task"
+    depends_on: ["BB-018"]
+    files: ["/home/pook/engineer-team/lib/audit_logger.py"]
+
+  # Phase 5: Hardening
+  BB-023:
+    title: "Disaster Recovery"
+    agent: "database-administrator"
+    model: "sonnet"
+    type: "security_task"
+    depends_on: ["BB-005", "BB-006"]
+    files: ["/home/pook/engineer-team/scripts/backup-kg.sh", "/home/pook/engineer-team/scripts/restore-kg.sh"]
+
+  BB-024:
+    title: "Dashboard UI"
+    agent: "ux-ui-designer"
+    model: "sonnet"
+    type: "implementation_task"
+    depends_on: ["BB-018", "BB-019"]
+    files: ["/home/pook/engineer-team/services/dashboard/"]
+
+  BB-025:
+    title: "Alerting Rules"
+    agent: "devops-incident-responder"
+    model: "sonnet"
+    type: "integration_task"
+    depends_on: ["BB-019"]
+    files: ["/home/pook/engineer-team/monitoring/alerts.yaml"]
+
+  BB-026:
+    title: "Documentation"
+    agent: "technical-writer"
+    model: "sonnet"
+    type: "documentation_task"
+    depends_on: ["BB-018", "BB-024"]
+    files: ["/home/pook/engineer-team/docs/docs-site/docs/self-learning/"]
+
+  BB-027:
+    title: "Load Testing"
+    agent: "performance-engineer"
+    model: "sonnet"
+    type: "testing_task"
+    depends_on: ["BB-016", "BB-018"]
+    files: ["/home/pook/engineer-team/tests/load/"]
+
+success_criteria:
+  overall_confidence: 0.92
+  test_coverage: 0.80
+  security_audit: "passed"
+  load_test: "p99 < 100ms"
+  documentation: "complete"
+
+rollback_triggers:
+  - "Any task confidence < 0.80"
+  - "Circuit breaker opens on >5 playbooks"
+  - "Security vulnerability discovered"
+  - "Load test fails p99 threshold"

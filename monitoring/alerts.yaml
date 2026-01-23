@@ -1,0 +1,452 @@
+# Blazing Buffalo Alerting Rules
+# Task: BB-025 - Create alerting rules for operational issues
+# Created: 2026-01-21
+#
+# This file contains Prometheus alerting rules for the Blazing Buffalo
+# mistake learning system. All alerts include runbook URLs for remediation.
+#
+# Alert Categories:
+# - Circuit Breaker: Playbook reliability issues
+# - False Positive Rate: Detection accuracy problems
+# - RCA Latency: Performance degradation
+# - Backup: Data protection failures
+# - System Health: General operational issues
+
+groups:
+  - name: blazing_buffalo_alerts
+    interval: 30s
+    rules:
+      # ========================================================================
+      # Circuit Breaker Alerts
+      # ========================================================================
+
+      - alert: PlaybookCircuitBreakerOpen
+        expr: blazing_buffalo_circuit_breaker_state == 1
+        for: 5m
+        labels:
+          severity: warning
+          team: engineering
+          component: playbook-executor
+          category: reliability
+        annotations:
+          summary: "Playbook circuit breaker open for {{ $labels.playbook_id }}"
+          description: |
+            Circuit breaker has been open for 5+ minutes for playbook {{ $labels.playbook_id }}.
+            This indicates repeated playbook execution failures. The playbook is currently
+            disabled to prevent cascading failures.
+
+            Current state: {{ $value }}
+            Playbook: {{ $labels.playbook_id }}
+          runbook_url: "https://docs.internal/runbooks/circuit-breaker-open"
+          dashboard_url: "https://grafana.internal/d/blazing-buffalo/circuit-breakers"
+
+      - alert: MultipleCircuitBreakersOpen
+        expr: count(blazing_buffalo_circuit_breaker_state == 1) > 3
+        for: 2m
+        labels:
+          severity: critical
+          team: engineering
+          component: playbook-executor
+          category: reliability
+        annotations:
+          summary: "Multiple playbook circuit breakers open"
+          description: |
+            {{ $value }} playbooks have open circuit breakers, indicating systemic issues.
+            This suggests a platform-wide problem affecting playbook execution.
+
+            Affected playbooks: {{ $value }}
+            Impact: Automated remediation is significantly degraded
+          runbook_url: "https://docs.internal/runbooks/multiple-circuits-open"
+          dashboard_url: "https://grafana.internal/d/blazing-buffalo/circuit-breakers"
+
+      - alert: CircuitBreakerFlapping
+        expr: |
+          changes(blazing_buffalo_circuit_breaker_state[15m]) > 4
+        for: 5m
+        labels:
+          severity: warning
+          team: engineering
+          component: playbook-executor
+          category: reliability
+        annotations:
+          summary: "Circuit breaker flapping for {{ $labels.playbook_id }}"
+          description: |
+            Circuit breaker for {{ $labels.playbook_id }} is flapping ({{ $value }} state changes in 15m).
+            This indicates intermittent failures or threshold tuning issues.
+          runbook_url: "https://docs.internal/runbooks/circuit-breaker-flapping"
+
+      # ========================================================================
+      # False Positive Rate Alerts
+      # ========================================================================
+
+      - alert: HighFalsePositiveRate
+        expr: |
+          (
+            sum(rate(blazing_buffalo_corrections_rejected_total[1h])) /
+            sum(rate(blazing_buffalo_mistakes_detected_total[1h]))
+          ) > 0.3
+        for: 30m
+        labels:
+          severity: warning
+          team: engineering
+          component: mistake-detector
+          category: accuracy
+        annotations:
+          summary: "High false positive rate in mistake detection"
+          description: |
+            False positive rate is {{ $value | humanizePercentage }}, exceeding 30% threshold.
+            This indicates the detection patterns may need tuning or retraining.
+
+            Current rate: {{ $value | humanizePercentage }}
+            Threshold: 30%
+            Impact: User frustration, reduced trust in system
+          runbook_url: "https://docs.internal/runbooks/high-false-positive"
+          dashboard_url: "https://grafana.internal/d/blazing-buffalo/detection-accuracy"
+
+      - alert: LowPlaybookSuccessRate
+        expr: blazing_buffalo_playbook_success_rate < 0.6
+        for: 1h
+        labels:
+          severity: warning
+          team: engineering
+          component: playbook-executor
+          category: effectiveness
+        annotations:
+          summary: "Low success rate for playbook {{ $labels.playbook_id }}"
+          description: |
+            Playbook {{ $labels.playbook_id }} success rate is {{ $value | humanizePercentage }},
+            below the 60% threshold. This playbook may need revision or deprecation.
+
+            Success rate: {{ $value | humanizePercentage }}
+            Threshold: 60%
+            Playbook: {{ $labels.playbook_id }}
+          runbook_url: "https://docs.internal/runbooks/low-playbook-success"
+          dashboard_url: "https://grafana.internal/d/blazing-buffalo/playbook-performance"
+
+      - alert: CriticalPlaybookSuccessRate
+        expr: blazing_buffalo_playbook_success_rate < 0.3
+        for: 10m
+        labels:
+          severity: critical
+          team: engineering
+          component: playbook-executor
+          category: effectiveness
+        annotations:
+          summary: "Critical: Playbook {{ $labels.playbook_id }} failing most executions"
+          description: |
+            Playbook {{ $labels.playbook_id }} has only {{ $value | humanizePercentage }} success rate.
+            This playbook should be disabled immediately.
+
+            Success rate: {{ $value | humanizePercentage }}
+            Action required: Disable playbook and investigate
+          runbook_url: "https://docs.internal/runbooks/critical-playbook-failure"
+
+      - alert: IncreasingRejectionRate
+        expr: |
+          (
+            rate(blazing_buffalo_corrections_rejected_total[30m])
+            /
+            rate(blazing_buffalo_corrections_rejected_total[30m] offset 1h)
+          ) > 1.5
+        for: 15m
+        labels:
+          severity: info
+          team: engineering
+          component: mistake-detector
+          category: accuracy
+        annotations:
+          summary: "Rejection rate increasing"
+          description: |
+            User rejection rate has increased {{ $value }}x compared to 1 hour ago.
+            This may indicate degraded detection quality or pattern drift.
+          runbook_url: "https://docs.internal/runbooks/increasing-rejections"
+
+      # ========================================================================
+      # RCA Performance Alerts
+      # ========================================================================
+
+      - alert: RCALatencyHigh
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(blazing_buffalo_rca_latency_seconds_bucket[5m])) by (le)
+          ) > 30
+        for: 10m
+        labels:
+          severity: warning
+          team: engineering
+          component: rca-pipeline
+          category: performance
+        annotations:
+          summary: "RCA pipeline latency high"
+          description: |
+            95th percentile RCA latency is {{ $value }}s, exceeding 30s threshold.
+            Users are experiencing slow root cause analysis results.
+
+            P95 latency: {{ $value }}s
+            Threshold: 30s
+            Impact: Delayed feedback to users
+          runbook_url: "https://docs.internal/runbooks/rca-latency-high"
+          dashboard_url: "https://grafana.internal/d/blazing-buffalo/rca-performance"
+
+      - alert: RCALatencyCritical
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(blazing_buffalo_rca_latency_seconds_bucket[5m])) by (le)
+          ) > 60
+        for: 5m
+        labels:
+          severity: critical
+          team: engineering
+          component: rca-pipeline
+          category: performance
+        annotations:
+          summary: "RCA pipeline latency critical"
+          description: |
+            95th percentile RCA latency is {{ $value }}s, exceeding 60s critical threshold.
+            RCA pipeline may be overloaded or experiencing external API issues.
+
+            P95 latency: {{ $value }}s
+            Critical threshold: 60s
+          runbook_url: "https://docs.internal/runbooks/rca-latency-critical"
+
+      - alert: RCARateLimitExceeded
+        expr: rate(blazing_buffalo_rate_limit_exceeded_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: info
+          team: engineering
+          component: rca-pipeline
+          category: capacity
+        annotations:
+          summary: "RCA rate limit exceeded"
+          description: |
+            Rate limiting is active, some RCA requests are being throttled.
+            {{ $value }} requests/second are hitting rate limits.
+
+            This is expected behavior to protect external APIs, but sustained
+            rate limiting may indicate capacity planning is needed.
+          runbook_url: "https://docs.internal/runbooks/rca-rate-limit"
+
+      - alert: RCAErrorRateHigh
+        expr: |
+          (
+            sum(rate(blazing_buffalo_rca_errors_total[10m])) /
+            sum(rate(blazing_buffalo_rca_total[10m]))
+          ) > 0.1
+        for: 10m
+        labels:
+          severity: warning
+          team: engineering
+          component: rca-pipeline
+          category: reliability
+        annotations:
+          summary: "RCA error rate high"
+          description: |
+            RCA pipeline error rate is {{ $value | humanizePercentage }}, exceeding 10% threshold.
+            Check external API availability and error logs.
+
+            Error rate: {{ $value | humanizePercentage }}
+            Threshold: 10%
+          runbook_url: "https://docs.internal/runbooks/rca-error-rate"
+
+      # ========================================================================
+      # Backup Alerts
+      # ========================================================================
+
+      - alert: BackupFailed
+        expr: blazing_buffalo_backup_last_success_timestamp < (time() - 86400)
+        for: 1h
+        labels:
+          severity: critical
+          team: platform
+          component: backup-system
+          category: data-protection
+        annotations:
+          summary: "Knowledge graph backup failed"
+          description: |
+            No successful backup in the last 24 hours.
+            Last successful backup: {{ $value | humanizeTimestamp }}
+
+            Risk: Data loss in case of system failure
+            Action required: Investigate backup system immediately
+          runbook_url: "https://docs.internal/runbooks/backup-failed"
+          dashboard_url: "https://grafana.internal/d/blazing-buffalo/backups"
+
+      - alert: BackupAgeWarning
+        expr: blazing_buffalo_backup_last_success_timestamp < (time() - 72000)
+        for: 30m
+        labels:
+          severity: warning
+          team: platform
+          component: backup-system
+          category: data-protection
+        annotations:
+          summary: "Knowledge graph backup aging"
+          description: |
+            Last backup is {{ $value | humanizeDuration }} old (>20 hours).
+            Approaching 24-hour backup SLA.
+
+            Last backup: {{ $value | humanizeTimestamp }}
+            SLA: 24 hours
+          runbook_url: "https://docs.internal/runbooks/backup-aging"
+
+      - alert: BackupSizeAnomaly
+        expr: |
+          abs(
+            blazing_buffalo_backup_size_bytes -
+            (blazing_buffalo_backup_size_bytes offset 24h)
+          ) / (blazing_buffalo_backup_size_bytes offset 24h) > 0.5
+        for: 1h
+        labels:
+          severity: warning
+          team: platform
+          component: backup-system
+          category: data-protection
+        annotations:
+          summary: "Backup size changed significantly"
+          description: |
+            Backup size changed {{ $value | humanizePercentage }} compared to 24h ago.
+            This may indicate data corruption, incomplete backup, or unexpected growth.
+
+            Change: {{ $value | humanizePercentage }}
+            Threshold: 50%
+          runbook_url: "https://docs.internal/runbooks/backup-size-anomaly"
+
+      # ========================================================================
+      # System Health Alerts
+      # ========================================================================
+
+      - alert: TaxonomyClusterExplosion
+        expr: blazing_buffalo_taxonomy_clusters_total > 500
+        for: 1h
+        labels:
+          severity: warning
+          team: engineering
+          component: taxonomy-manager
+          category: system-health
+        annotations:
+          summary: "Excessive taxonomy clusters"
+          description: |
+            {{ $value }} taxonomy clusters exist, exceeding 500 threshold.
+            This may indicate clustering threshold issues or taxonomy fragmentation.
+
+            Current clusters: {{ $value }}
+            Threshold: 500
+            Impact: Reduced pattern matching efficiency
+          runbook_url: "https://docs.internal/runbooks/taxonomy-cluster-explosion"
+
+      - alert: NoMistakesDetected
+        expr: rate(blazing_buffalo_mistakes_detected_total[1h]) == 0
+        for: 4h
+        labels:
+          severity: info
+          team: engineering
+          component: mistake-detector
+          category: system-health
+        annotations:
+          summary: "No mistakes detected in 4 hours"
+          description: |
+            No mistakes have been detected in the last 4 hours.
+            This may indicate:
+            - Mistake detection is malfunctioning
+            - System is unusually quiet
+            - Detection patterns need updating
+
+            Last detection: >4 hours ago
+          runbook_url: "https://docs.internal/runbooks/no-mistakes-detected"
+
+      - alert: PlaybookExecutionSpike
+        expr: |
+          rate(blazing_buffalo_playbook_executions_total[5m]) >
+          (avg_over_time(rate(blazing_buffalo_playbook_executions_total[5m])[1h:5m]) * 3)
+        for: 10m
+        labels:
+          severity: info
+          team: engineering
+          component: playbook-executor
+          category: system-health
+        annotations:
+          summary: "Playbook execution spike detected"
+          description: |
+            Playbook execution rate is {{ $value }}x above normal (3x threshold).
+            This may indicate:
+            - Widespread mistake pattern
+            - Automated system triggering mistakes
+            - Attack or abuse
+          runbook_url: "https://docs.internal/runbooks/playbook-spike"
+
+      - alert: HighMemoryUsage
+        expr: blazing_buffalo_memory_usage_bytes > (1024 * 1024 * 1024 * 2)
+        for: 15m
+        labels:
+          severity: warning
+          team: platform
+          component: system
+          category: resources
+        annotations:
+          summary: "High memory usage"
+          description: |
+            Blazing Buffalo system memory usage is {{ $value | humanize }}B (>2GB threshold).
+            May indicate memory leak or unexpected load.
+
+            Current usage: {{ $value | humanize }}B
+            Threshold: 2GB
+          runbook_url: "https://docs.internal/runbooks/high-memory"
+
+      - alert: KnowledgeGraphStale
+        expr: time() - blazing_buffalo_kg_last_update_timestamp > 86400
+        for: 1h
+        labels:
+          severity: warning
+          team: engineering
+          component: knowledge-graph
+          category: data-quality
+        annotations:
+          summary: "Knowledge graph not updated in 24 hours"
+          description: |
+            Knowledge graph has not been updated in {{ $value | humanizeDuration }}.
+            This may indicate learning pipeline issues.
+
+            Last update: {{ $value | humanizeTimestamp }}
+            Threshold: 24 hours
+          runbook_url: "https://docs.internal/runbooks/kg-stale"
+
+      # ========================================================================
+      # Playbook Lifecycle Alerts
+      # ========================================================================
+
+      - alert: PlaybookVersionMismatch
+        expr: count(blazing_buffalo_playbook_version) by (playbook_id) > 1
+        for: 30m
+        labels:
+          severity: info
+          team: engineering
+          component: playbook-executor
+          category: consistency
+        annotations:
+          summary: "Multiple versions of playbook {{ $labels.playbook_id }} active"
+          description: |
+            Playbook {{ $labels.playbook_id }} has multiple active versions.
+            This may cause inconsistent behavior during rollout.
+
+            Active versions: {{ $value }}
+          runbook_url: "https://docs.internal/runbooks/playbook-version-mismatch"
+
+      - alert: PlaybookDeprecationOverdue
+        expr: |
+          blazing_buffalo_playbook_deprecated == 1 and
+          time() - blazing_buffalo_playbook_deprecated_timestamp > (86400 * 30)
+        for: 1h
+        labels:
+          severity: info
+          team: engineering
+          component: playbook-executor
+          category: maintenance
+        annotations:
+          summary: "Deprecated playbook {{ $labels.playbook_id }} overdue for removal"
+          description: |
+            Playbook {{ $labels.playbook_id }} has been deprecated for >30 days.
+            Consider removing if no longer needed.
+
+            Deprecated for: {{ $value | humanizeDuration }}
+          runbook_url: "https://docs.internal/runbooks/playbook-cleanup"
