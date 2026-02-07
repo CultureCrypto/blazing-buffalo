@@ -1,3 +1,5 @@
+Yo, WTF happened on Telegram???
+
 # Blazing Buffalo 🦬🔥
 
 Self-Learning Mistake System for AI Agent Ecosystems
